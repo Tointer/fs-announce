@@ -1,0 +1,3 @@
+[submodule "web3-frontend"]
+	path = web3-frontend
+	url = https://github.com/dragoonzx/web3-frontend
