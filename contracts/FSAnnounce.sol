@@ -1,7 +1,5 @@
-//SPDX-License-Identifier: UNLICENSED
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
-
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract FSAnnounce {
     //user address => token address => post
@@ -34,7 +32,24 @@ contract FSAnnounce {
         }
     }
 
-    function getPostByIndex(address owner, address tokenAddress, uint index) external view returns(string memory encryptedFile, string memory key, uint timestamp){
+    function getAllPosts(address owner, address tokenAddress) 
+    external view returns(
+        string[] memory encryptedFiles, 
+        string[] memory keys, 
+        uint[] memory timestamps)
+    {
+        uint len = getPostsCount(owner, tokenAddress);
+
+        encryptedFiles = new string[](len);
+        keys = new string[](len);
+        timestamps = new uint[](len);
+
+        for (uint i = 0; i < len; i++) {
+            (encryptedFiles[i], keys[i], timestamps[i]) = getPostByIndex(owner, tokenAddress, i);
+        }
+    }
+
+    function getPostByIndex(address owner, address tokenAddress, uint index) public view returns(string memory encryptedFile, string memory key, uint timestamp){
         Post storage post = posts[owner][tokenAddress][index];
         encryptedFile = post.encryptedFile;
         key = post.key;
