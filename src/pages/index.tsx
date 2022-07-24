@@ -1,10 +1,10 @@
-import Image from "next/image";
+import dynamic from "next/dynamic";
+
 const App = function () {
-  return (
-    <>
-      <div>Frontend App</div>
-    </>
-  );
+  const ComponentWithNoSSR = dynamic(() => import("../components/Main"), {
+    ssr: false,
+  });
+  return <ComponentWithNoSSR />;
 };
 
 export default App;
