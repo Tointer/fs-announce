@@ -13,7 +13,10 @@ export async function getNiftiesInfo(
   if (data && data.length) {
     const result = [];
     data.forEach((v) => {
-      if (!result.find((p) => p.contract_address === v.contract_address)) {
+      if (
+        !result.find((p) => p.contract_address === v.contract_address) &&
+        v.metadata
+      ) {
         result.push(v);
       }
     });
