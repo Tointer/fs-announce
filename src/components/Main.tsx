@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import CollectionMockImg from "../assets/collection-mock.png";
 import { getWalletNftCollections } from "../dapp/getWalletNftCollections";
 import { useAccount } from "wagmi";
+import { getNiftiesInfo } from "../dapp/getNiftiesInfo";
 
 const Main = () => {
   const { address, isConnected } = useAccount();
@@ -26,6 +27,8 @@ const Main = () => {
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [nifties, setNifties] = useState<any>([]);
 
+  const [activeContract, setActiveContract] = useState("");
+
   useEffect(() => {
     if (!(isConnected && address)) {
       return;
@@ -35,7 +38,7 @@ const Main = () => {
     const getNifties = async () => {
       setLoadingNFT(true);
       try {
-        const data = await getWalletNftCollections(1, address);
+        const data = await getNiftiesInfo("ethereum", address);
         setNifties(data);
       } finally {
         setLoadingNFT(false);
@@ -44,7 +47,18 @@ const Main = () => {
     getNifties();
   }, [isConnected]);
 
-  console.log({ nifties });
+  const [announceText, setAnnounceText] = useState("");
+
+  const submitAnnouncement = (e: any) => {
+    e.preventDefault();
+    console.log("submit");
+
+    if (!(announceText && activeContract)) {
+      return;
+    }
+
+    console.log("gogo");
+  };
 
   return (
     <>
@@ -251,12 +265,50 @@ const Main = () => {
                   </div>
                 ) : (
                   <div>
-                    <div className="flex flex-wrap items-center space-x-2">
+                    <p className="font-bold text-lg">Select Collection</p>
+                    <div className="flex max-w-full overflow-auto items-center space-x-2 mt-4 py-4">
                       {nifties.map((v) => (
-                        <div key={v.contract_address} className="rounded-xl">
-                          <img src={v.logo_url} alt="" />
+                        <div
+                          onClick={() => setActiveContract(v.contract_address)}
+                          key={v.contract_address}
+                          className={classNames(
+                            "rounded-xl flex flex-col justify-center items-center min-w-[150px] cursor-pointer p-2",
+                            activeContract === v.contract_address
+                              ? "bg-gray-100"
+                              : ""
+                          )}
+                        >
+                          <img
+                            src={v.cached_file_url}
+                            alt=""
+                            className="w-24 h-24 rounded"
+                          />
+                          <p className="mt-2 font-semibold text-sm">
+                            {v.contract.name}
+                          </p>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-4">
+                      <form
+                        onSubmit={submitAnnouncement}
+                        className="form-control max-w-[500px]"
+                      >
+                        <label className="label">
+                          <span className="label-text font-bold text-lg">
+                            Announcement
+                          </span>
+                        </label>
+                        <textarea
+                          className="textarea textarea-bordered h-24"
+                          placeholder="Check out this new..."
+                          value={announceText}
+                          onChange={(e) => setAnnounceText(e.target.value)}
+                        ></textarea>
+                        <button className="btn btn-secondary mt-2">
+                          Submit
+                        </button>
+                      </form>
                     </div>
                   </div>
                 )}
