@@ -7,7 +7,7 @@ import { Contract } from "ethers";
   
 export async function getAnnounces(owner: string, tokenAddress: string){
     const FSAnnounce = await ethers.getContractFactory("FSAnnounce");
-    const announce: FSAnnounce = new Contract("0xe415D14F42fDF0c08785303d1EA796469e1FdcEb", 
+    const announce: FSAnnounce = new Contract("0xa74F634338ee3ec1fF985EC7EF7501625Bb1Cf58", 
     FSAnnounce.interface, 
     FSAnnounce.signer) as FSAnnounce
 
