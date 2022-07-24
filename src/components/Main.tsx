@@ -33,11 +33,20 @@ const Main = () => {
   const { address, isConnected } = useAccount();
   const provider = useProvider();
   const { switchNetworkAsync } = useSwitchNetwork();
+
+  const [successfulWrite, setSuccessfulWrite] = useState(false);
+  const [lastHash, setHash] = useState("");
+
   const { data, isError, isLoading, writeAsync } = useContractWrite({
     addressOrName: MUMBAI_CONTRACT_ADDRESS,
     contractInterface: FSAnnounceABI,
     functionName: "newPost",
     signerOrProvider: provider,
+    onSuccess(data) {
+      console.log("Success", data);
+      setSuccessfulWrite(true);
+      setHash(data.hash);
+    },
   });
 
   // const removeLastPostContract = useContractWrite({
@@ -124,6 +133,8 @@ const Main = () => {
     }
   };
 
+  const [announcements, setAnnouncements] = useState<any>([]);
+
   useEffect(() => {
     if (!(isConnected && address)) {
       return;
@@ -133,30 +144,51 @@ const Main = () => {
       if (!nifties.length) {
         return;
       }
-      let result = [];
-      for (let i = 0; i < nifties.length - 1; i++) {
-        const a = await getAnnounces(
-          address,
-          nifties[i].contract_address,
-          provider
-        );
-        console.log({ a });
+      setLoadingAnnounces(true);
+      try {
+        let result = [];
+        for (let i = 0; i < nifties.length; i++) {
+          const a = await getAnnounces(
+            address,
+            nifties[i].contract_address,
+            provider
+          );
 
-        if (a) {
-          result = [...a];
+          if (a && a.length > 0) {
+            result = [
+              ...result,
+              {
+                contract_address: nifties[i].contract_address,
+                messages: await Promise.all(
+                  a.map(async (v) => {
+                    const data = await fetch(v.decryptedFile);
+                    const text = await data.text();
+                    return text;
+                  })
+                ),
+              },
+            ];
+          }
         }
-      }
-      console.log({ result });
+        console.log({ result });
 
-      return result;
+        const ans = [];
+        result.forEach((v) =>
+          v.messages.forEach((k) => {
+            ans.push({
+              contract_address: v.contract_address,
+              message: k,
+            });
+          })
+        );
+
+        setAnnouncements(ans);
+      } finally {
+        setLoadingAnnounces(false);
+      }
     };
 
-    setLoadingAnnounces(true);
-    try {
-      getAnnouncements();
-    } finally {
-      setLoadingAnnounces(false);
-    }
+    getAnnouncements();
   }, [isConnected, nifties]);
 
   // const [lastPostTokenAddress, setLastPostTokenAddress] = useState("");
@@ -327,30 +359,35 @@ const Main = () => {
                     <span className="sr-only">Loading...</span>
                   </div>
                 ) : (
-                  [1, 2, 3, 4, 5, 6, 7, 8, 9].map((v) => (
+                  announcements.map((v) => (
                     <div
-                      key={v}
+                      key={v.contract_address + v.message}
                       className="rounded-xl border p-4 w-[600px] max-w-full"
                     >
                       <p className="font-bold">
                         <span className="bg-gradient-to-br from-pink-500 to-orange-400 text-white px-2 py-1 rounded-xl font-semibold">
-                          Crypto Punks
+                          {
+                            nifties.find(
+                              (k) => k.contract_address === v.contract_address
+                            ).contract.name
+                          }
                         </span>{" "}
                         Collection
                       </p>
                       <div className="space-x-2 flex mt-3">
-                        <Image
-                          src={CollectionMockImg}
+                        <img
+                          src={
+                            nifties.find(
+                              (k) => k.contract_address === v.contract_address
+                            ).cached_file_url
+                          }
                           alt=""
                           className="w-16 h-16 rounded"
                           width={64}
                           height={64}
                         />
                         <div className="flex flex-col justify-between">
-                          <div>Some message description bla bla bla</div>
-                          <div className="font-semibold text-xs">
-                            12:30 05/07/2022
-                          </div>
+                          <div>{v.message}</div>
                         </div>
                       </div>
                     </div>
@@ -449,11 +486,23 @@ const Main = () => {
                               ></path>
                             </svg>
                           ) : null}
-                          Encrypt
+                          Encrypt & Send
                         </button>
-                        <button className="btn btn-secondary btn-disabled mt-2">
-                          Announcement not ready, encrypt first
-                        </button>
+                        {!successfulWrite ? (
+                          <button className="btn btn-secondary btn-disabled mt-2">
+                            Announcement not ready, encrypt first
+                          </button>
+                        ) : (
+                          <div className="flex flex-col space-y-2">
+                            <button className="btn btn-success !text-white mt-2">
+                              Announcement TX successfully sent!
+                            </button>
+                            <a
+                              href={`https://mumbai.polygonscan.com/tx/${lastHash}`}
+                              target="_blank"
+                            >{`https://mumbai.polygonscan.com/tx/${lastHash}`}</a>
+                          </div>
+                        )}
                       </form>
                     </div>
                   </div>

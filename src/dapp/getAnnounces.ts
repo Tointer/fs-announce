@@ -11,7 +11,9 @@ export async function getAnnounces(
   const announce = new ethers.Contract(
     MUMBAI_CONTRACT_ADDRESS,
     FSAnnounceABI,
-    provider
+    new ethers.providers.JsonRpcProvider(
+      "https://polygon-mumbai.g.alchemy.com/v2/R7xBXk5L6mjOaziNji0aU5oSzn5BW21i"
+    )
   );
 
   const result: any[] = [];
