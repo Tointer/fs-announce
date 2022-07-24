@@ -28,6 +28,8 @@
     "classnames": "^2.3.1",
     "daisyui": "2.18.1",
     "date-fns": "^2.28.0",
+    "ipfs-http-client": "^57.0.3",
+    "lit-js-sdk": "^1.1.202",
     "next": "12.2.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
