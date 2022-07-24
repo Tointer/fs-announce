@@ -8,12 +8,13 @@ contract FSAnnounce {
     mapping(address => mapping(address => Post[])) posts;
 
     struct Post{
-        bytes encryptedFile;
-        bytes key;
+        string encryptedFile;
+        string key;
+        uint timestamp;
     }
 
-    function newPost(address tokenAddress, bytes calldata file, bytes calldata key) external {
-        posts[msg.sender][tokenAddress].push(Post(file, key));
+    function newPost(address tokenAddress, string calldata file, string calldata key) external {
+        posts[msg.sender][tokenAddress].push(Post(file, key, block.timestamp));
     }
 
     function removeLastPost(address tokenAddress) external {
@@ -33,9 +34,10 @@ contract FSAnnounce {
         }
     }
 
-    function getPostByIndex(address owner, address tokenAddress, uint index) external view returns(bytes memory encryptedFile, bytes memory key){
+    function getPostByIndex(address owner, address tokenAddress, uint index) external view returns(string memory encryptedFile, string memory key, uint timestamp){
         Post storage post = posts[owner][tokenAddress][index];
         encryptedFile = post.encryptedFile;
         key = post.key;
+        timestamp = post.timestamp;
     }
 }
