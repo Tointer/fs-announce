@@ -10,10 +10,6 @@ export async function handleSubmit(contractAddress: string, message: string) {
 
     const encrypted = await Lit.encryptString(url, contractAddress);
 
-    // console.log("ENCRYPTED:");
-    // console.log(encrypted.encryptedFile);
-    // console.log(encrypted.encryptedSymmetricKey);
-
     return encrypted;
   } catch (error) {
     /* @ts-ignore */
