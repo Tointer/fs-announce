@@ -6,11 +6,46 @@ import { useEffect, useState } from "react";
 
 import CollectionMockImg from "../assets/collection-mock.png";
 import { getWalletNftCollections } from "../dapp/getWalletNftCollections";
-import { useAccount } from "wagmi";
+import {
+  chain,
+  useAccount,
+  useSwitchNetwork,
+  useContractWrite,
+  useProvider,
+} from "wagmi";
 import { getNiftiesInfo } from "../dapp/getNiftiesInfo";
+import { handleSubmit } from "../dapp/handleSubmit";
+import { MUMBAI_CONTRACT_ADDRESS } from "../dapp/contracts";
+import FSAnnounceABI from "../dapp/FSAnnounceABI.json";
+import { getAnnounces } from "../dapp/getAnnounces";
+
+const blobToBase64 = (blob: any) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(blob);
+  return new Promise((resolve) => {
+    reader.onloadend = () => {
+      resolve(reader.result);
+    };
+  });
+};
 
 const Main = () => {
   const { address, isConnected } = useAccount();
+  const provider = useProvider();
+  const { switchNetworkAsync } = useSwitchNetwork();
+  const { data, isError, isLoading, writeAsync } = useContractWrite({
+    addressOrName: MUMBAI_CONTRACT_ADDRESS,
+    contractInterface: FSAnnounceABI,
+    functionName: "newPost",
+    signerOrProvider: provider,
+  });
+
+  // const removeLastPostContract = useContractWrite({
+  //   addressOrName: MUMBAI_CONTRACT_ADDRESS,
+  //   contractInterface: FSAnnounceABI,
+  //   functionName: "removeLastPost",
+  //   signerOrProvider: provider,
+  // });
 
   const [activeTab, setActiveTab] = useState("home");
 
@@ -49,7 +84,9 @@ const Main = () => {
 
   const [announceText, setAnnounceText] = useState("");
 
-  const submitAnnouncement = (e: any) => {
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  const submitAnnouncement = async (e: any) => {
     e.preventDefault();
     console.log("submit");
 
@@ -57,8 +94,78 @@ const Main = () => {
       return;
     }
 
-    console.log("gogo");
+    setSubmitLoading(true);
+    console.log("gogo", activeContract, announceText);
+    try {
+      const encryptedData = await handleSubmit(activeContract, announceText);
+      console.log({ encryptedData });
+
+      if (
+        !(encryptedData.encryptedFile && encryptedData.encryptedSymmetricKey)
+      ) {
+        return;
+      }
+
+      // call chain change
+      await switchNetworkAsync(chain.polygonMumbai.id);
+
+      const encryptedFileText = await blobToBase64(encryptedData.encryptedFile);
+      console.log({ encryptedFileText });
+      // call smart contract
+      await writeAsync({
+        args: [
+          activeContract,
+          encryptedFileText,
+          encryptedData.encryptedSymmetricKey.toString(),
+        ],
+      });
+    } finally {
+      setSubmitLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (!(isConnected && address)) {
+      return;
+    }
+
+    const getAnnouncements = async () => {
+      if (!nifties.length) {
+        return;
+      }
+      let result = [];
+      for (let i = 0; i < nifties.length - 1; i++) {
+        const a = await getAnnounces(
+          address,
+          nifties[i].contract_address,
+          provider
+        );
+        console.log({ a });
+
+        if (a) {
+          result = [...a];
+        }
+      }
+      console.log({ result });
+
+      return result;
+    };
+
+    setLoadingAnnounces(true);
+    try {
+      getAnnouncements();
+    } finally {
+      setLoadingAnnounces(false);
+    }
+  }, [isConnected, nifties]);
+
+  // const [lastPostTokenAddress, setLastPostTokenAddress] = useState("");
+
+  // const removeLastPost = async () => {
+  //   await removeLastPostContract.writeAsync({
+  //     args: [lastPostTokenAddress],
+  //   });
+  // };
 
   return (
     <>
@@ -181,6 +288,20 @@ const Main = () => {
         <div className="mt-4">
           {activeTab === "home" ? (
             <div className="border-t border-b p-4 overflow-auto max-h-screen">
+              {/* <div className="flex flex-col max-w-[200px] container mx-auto">
+                <label>
+                  Last post token address:
+                  <input
+                    type="text"
+                    className="input input-bordered "
+                    value={lastPostTokenAddress}
+                    onChange={(e) => setLastPostTokenAddress(e.target.value)}
+                  />
+                </label>
+                <button className="btn btn-primary" onClick={removeLastPost}>
+                  Remove last post
+                </button>
+              </div> */}
               <div className="flex flex-col space-y-4 container mx-auto">
                 {!isConnected ? (
                   <div className="text-center text-xl">
@@ -306,7 +427,32 @@ const Main = () => {
                           onChange={(e) => setAnnounceText(e.target.value)}
                         ></textarea>
                         <button className="btn btn-secondary mt-2">
-                          Submit
+                          {submitLoading ? (
+                            <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                          ) : null}
+                          Encrypt
+                        </button>
+                        <button className="btn btn-secondary btn-disabled mt-2">
+                          Announcement not ready, encrypt first
                         </button>
                       </form>
                     </div>
